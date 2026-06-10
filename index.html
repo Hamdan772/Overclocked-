@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#242424" />
+    <meta name="description" content="Overclock an old computer, run dubious scripts, and make an unreasonable number of Bytes." />
+    <title>Overclocked!</title>
+    <link rel="icon" href="/assets/vendor/old-tv-denislav.png" />
+    <link rel="stylesheet" href="/assets/vendor/kenney-icon-css/kenney-icons.css" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span><strong>Overclocked!</strong><small>idle computer game</small></span>
+      </div>
+      <nav class="top-actions">
+        <span id="clock">00:00:00</span>
+        <button id="achievementsButton">Achievements</button>
+        <button class="hidden" id="prestigeButton">Wipe drive</button>
+        <button id="settingsButton">Settings</button>
+      </nav>
+    </header>
+
+    <main class="game-shell">
+      <aside class="collection-panel">
+        <header class="wood-header">
+          <span>Your network</span>
+          <small id="runTime">UPTIME 00:00</small>
+        </header>
+        <section class="quick-stats">
+          <div><span>Per second</span><strong id="bps">0 B/S</strong></div>
+          <div><span>Per click</span><strong id="bpc">1 B</strong></div>
+          <div><span>All time</span><strong id="allTime">0 B</strong></div>
+          <div><span>Reputation</span><strong id="rep">0 / 1000</strong></div>
+          <div><span>Ghost Bytes</span><strong id="ghostBytes">0 GBY</strong></div>
+        </section>
+        <section class="owned-section">
+          <div class="section-title"><span>Running programs</span><small id="clicks">0 clicks</small></div>
+          <div class="owned-grid" id="ownedGrid"></div>
+          <div class="empty-owned" id="emptyOwned">
+            <strong>Nothing running yet</strong>
+            <span>Click the computer, then buy a Shell Script.</span>
+          </div>
+        </section>
+        <section class="log-section">
+          <div class="section-title"><span>Recent activity</span></div>
+          <div id="systemLog" class="system-log" aria-live="polite"></div>
+        </section>
+      </aside>
+
+      <section class="play-area">
+        <div class="currency-board">
+          <span>Bytes in wallet</span>
+          <output id="bytes">0</output>
+          <strong id="rateLine">0 B per second</strong>
+        </div>
+        <div class="stage-ribbon" id="stageLabel">Dusty Thinkpad</div>
+
+        <div class="machine-zone" id="machineZone">
+          <button class="laptop stage-1" id="laptop" aria-label="Click computer to generate Bytes">
+            <img src="/assets/vendor/old-tv-denislav.png" alt="Pixel art CRT television by Denislav" draggable="false" />
+            <span class="click-hint" id="screenPrompt">CLICK</span>
+            <span class="click-output" id="screenBpc">+1 Byte</span>
+          </button>
+          <div id="clickBursts" aria-hidden="true"></div>
+        </div>
+
+        <div class="controls-dock">
+          <section class="overclock-card">
+            <div>
+              <span class="control-name">Overclock</span>
+              <strong id="switchLabel">Locked at 50K Bytes</strong>
+            </div>
+            <button id="overclockSwitch" class="switch locked" aria-pressed="false">
+              <span class="switch-track"><span class="switch-handle"></span></span>
+            </button>
+            <button id="tierButton" class="tier-button" disabled>Boost ×2</button>
+          </section>
+          <section class="meter-card">
+            <div class="meter-head"><span>Temperature</span><output id="tempValue">21.0°C</output></div>
+            <div class="meter temp-meter" id="tempMeter"><span id="tempFill"></span><i></i></div>
+            <small id="tempStatus">Cool and steady</small>
+          </section>
+          <section class="meter-card cache-card">
+            <div class="meter-head"><span>Batch cache</span><output id="cacheValue">No storage</output></div>
+            <button class="meter" id="cacheMeter"><span id="cacheFill"></span></button>
+            <small>Click to sell early at 80%</small>
+          </section>
+        </div>
+      </section>
+
+      <aside class="shop-panel">
+        <header class="wood-header">
+          <span>Store</span>
+          <strong id="shopFunds">0 B</strong>
+        </header>
+        <nav class="shop-tabs" id="shopTabs"></nav>
+        <div class="shop-help">Bright items are affordable. Buy programs to earn Bytes automatically.</div>
+        <div class="shop-list" id="shopList"></div>
+      </aside>
+    </main>
+
+    <div class="event-stack" id="eventStack"></div>
+    <div class="toast-stack" id="toastStack"></div>
+
+    <dialog id="modal">
+      <div class="modal-head"><span id="modalTitle">Panel</span><button id="modalClose">Close</button></div>
+      <div id="modalBody" class="modal-body"></div>
+    </dialog>
+
+    <div id="lockdown" class="lockdown hidden">
+      <div><strong>Too hot!</strong><span>The computer is cooling down.</span><output id="lockdownTimer">--</output></div>
+    </div>
+
+    <script type="module" src="/game.js"></script>
+  </body>
+</html>
