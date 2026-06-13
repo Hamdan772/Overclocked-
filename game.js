@@ -122,6 +122,7 @@ let unlockSignature = "";
 let lastRenderedStage = stageIndex();
 let lastProgramUnlockCount = PROGRAM_UNLOCKS.filter(cost => state.allTime >= cost).length;
 let mobileView = "machine";
+let lastShopRefreshSecond = -1;
 
 const $ = id => document.getElementById(id);
 const fmt = n => {
@@ -166,9 +167,22 @@ function readSave(raw) {
 }
 function normalizeSave(data) {
   const loaded = { ...freshState(), ...data, event: null, overclock: false, packetVisible: false };
-  loaded.software = [...(data.software || []), ...Array(SOFTWARE.length).fill(0)].slice(0, SOFTWARE.length);
-  loaded.os = [...(data.os || []), ...Array(OS.length).fill(false)].slice(0, OS.length);
-  loaded.abilities = [...(data.abilities || []), ...Array(ABILITIES.length).fill(false)].slice(0, ABILITIES.length);
+  const finite = (value, fallback = 0) => Number.isFinite(Number(value)) ? Number(value) : fallback;
+  const whole = (value, max = Number.MAX_SAFE_INTEGER) => Math.min(max, Math.max(0, Math.floor(finite(value))));
+  loaded.software = [...(Array.isArray(data.software) ? data.software : []), ...Array(SOFTWARE.length).fill(0)].slice(0, SOFTWARE.length).map(value => whole(value));
+  loaded.os = [...(Array.isArray(data.os) ? data.os : []), ...Array(OS.length).fill(false)].slice(0, OS.length).map(Boolean);
+  loaded.abilities = [...(Array.isArray(data.abilities) ? data.abilities : []), ...Array(ABILITIES.length).fill(false)].slice(0, ABILITIES.length).map(Boolean);
+  loaded.bytes = Math.max(0, finite(loaded.bytes)); loaded.allTime = Math.max(0, finite(loaded.allTime));
+  loaded.ghostBytes = whole(loaded.ghostBytes); loaded.network = whole(loaded.network, NETWORK.length);
+  loaded.storage = whole(loaded.storage, STORAGE.length); loaded.power = whole(loaded.power, POWER.length); loaded.cooling = whole(loaded.cooling, COOLING.length);
+  loaded.temp = Math.min(100, Math.max(0, finite(loaded.temp))); loaded.cache = Math.max(0, finite(loaded.cache));
+  loaded.lastSave = finite(loaded.lastSave, Date.now());
+  loaded.sessionBpsBonus = Math.max(1, finite(loaded.sessionBpsBonus, 1));
+  loaded.overclockTier = Math.min(loaded.power >= 6 ? 4 : loaded.power >= 4 ? 3 : loaded.power >= 3 ? 2 : 1, Math.max(1, whole(loaded.overclockTier)));
+  loaded.buyAmount = [1, 10, 100, "max"].includes(loaded.buyAmount) ? loaded.buyAmount : 1;
+  loaded.activeTab = ["software", "click", "network", "storage", "power", "cooling", "os", "abilities"].includes(loaded.activeTab) ? loaded.activeTab : "software";
+  loaded.achievements = Array.isArray(loaded.achievements) ? loaded.achievements.filter(name => ACHIEVEMENTS.some(([valid]) => valid === name)) : [];
+  loaded.synergiesDiscovered = Array.isArray(loaded.synergiesDiscovered) ? loaded.synergiesDiscovered.filter(name => SYNERGIES.some(({ name: valid }) => valid === name)) : [];
   loaded.nextEvent = Math.max(loaded.nextEvent || 0, Date.now() + 60000);
   loaded.nextPacket = Math.max(loaded.nextPacket || 0, Date.now() + 60000);
   return loaded;
@@ -305,7 +319,9 @@ function clickLaptop(event) {
   checkAchievements();
 }
 function buy(tab, index) {
+  if (!Number.isInteger(index) || index < 0) return;
   if (tab === "software") {
+    if (!SOFTWARE[index]) return;
     if (state.allTime < PROGRAM_UNLOCKS[index]) return;
     const amount = buyCount(SOFTWARE[index][1], state.software[index]);
     if (!amount) return;
@@ -324,15 +340,16 @@ function buy(tab, index) {
     const cost = bulkPrice(10, state.clickUpgrades, amount);
     if (spend(cost)) state.clickUpgrades += amount;
   } else if (tab === "os") {
-    const item = OS[index]; if (!state.os[index] && item[3]() && spend(item[1])) { state.os[index] = true; toast(`${item[0]} installed`); }
+    const item = OS[index]; if (item && !state.os[index] && item[3]() && spend(item[1])) { state.os[index] = true; toast(`${item[0]} installed`); }
   } else if (tab === "abilities") {
     const item = ABILITIES[index];
-    if (!state.abilities[index] && item[3]() && spend(item[1])) {
+    if (item && !state.abilities[index] && item[3]() && spend(item[1])) {
       state.abilities[index] = true; toast(`ABILITY ONLINE // ${item[0]}`); log(`ABILITY UNLOCKED: ${item[0].toUpperCase()}`);
     }
   } else {
     const lists = { network: NETWORK, storage: STORAGE, power: POWER, cooling: COOLING };
-    const key = tab; const item = lists[key][index];
+    const key = tab; const item = lists[key]?.[index];
+    if (!item || !Number.isInteger(state[key])) return;
     if (index + 1 === state[key] + 1 && spend(item[1])) { state[key] = index + 1; toast(`${item[0]} online`); }
   }
   renderShopNeeded = true; save();
@@ -524,14 +541,15 @@ function grantOfflineEarnings() {
 }
 function toggleOverclock() {
   if (!state.overclockUnlocked) {
-    if (spend(50000)) { state.overclockUnlocked = true; toast("Overclock control unlocked"); }
+    if (state.allTime < 5000) { toast(`Overclock unlocks after earning ${fmt(5000 - state.allTime)} more all-time Bytes`); return; }
+    if (spend(50000)) { state.overclockUnlocked = true; toast("Overclock control unlocked"); renderShopNeeded = true; save(); }
     else toast(`Need ${fmt(50000 - state.bytes)} more Bytes`);
     return;
   }
   if (state.lockdown) return;
   state.overclock = !state.overclock; state.overclockEver ||= state.overclock;
   log(`OVERCLOCK ${state.overclock ? "ENGAGED" : "DISENGAGED"}`, state.overclock);
-  checkAchievements();
+  checkAchievements(); save();
 }
 function triggerLockdown() {
   state.overclock = false; state.lockdown = true; state.lockdowns++;
@@ -731,6 +749,8 @@ function render() {
   document.querySelectorAll("[data-buy-amount]").forEach(button => button.classList.toggle("active", String(button.dataset.buyAmount) === String(state.buyAmount)));
   const currentUnlockSignature = `${unlockedTabs().map(([id]) => id).join(",")}|programs:${lastProgramUnlockCount}`;
   if (currentUnlockSignature !== unlockSignature) { unlockSignature = currentUnlockSignature; renderShopNeeded = true; shelfSignature = ""; }
+  const shopRefreshSecond = Math.floor(Date.now() / 1000);
+  if (shopRefreshSecond !== lastShopRefreshSecond) { lastShopRefreshSecond = shopRefreshSecond; renderShopNeeded = true; }
   renderOwned();
   if (renderShopNeeded) renderShop();
   else document.querySelectorAll("[data-buy]").forEach((el, i) => {
@@ -759,7 +779,7 @@ document.addEventListener("keydown", e => {
     const amounts = [1, 10, 100, "max"]; state.buyAmount = amounts[(amounts.indexOf(state.buyAmount) + 1) % amounts.length]; renderShopNeeded = true; render();
   }
 });
-$("shopTabs").addEventListener("click", e => { const tab = e.target.dataset.tab; if (tab) { state.activeTab = tab; renderShopNeeded = true; render(); } });
+$("shopTabs").addEventListener("click", e => { const tab = e.target.closest("[data-tab]")?.dataset.tab; if (tab) { state.activeTab = tab; renderShopNeeded = true; render(); } });
 $("shopList").addEventListener("click", e => { const button = e.target.closest("[data-buy]"); if (button) buy(state.activeTab, Number(button.dataset.buy)); });
 $("upgradeShelf").addEventListener("click", e => { const button = e.target.closest("[data-shelf-tab]"); if (button) buy(button.dataset.shelfTab, Number(button.dataset.shelfIndex)); });
 document.querySelector(".shop-toolbar").addEventListener("click", e => {
@@ -771,7 +791,7 @@ document.querySelector(".shop-toolbar").addEventListener("click", e => {
   renderShopNeeded = true;
 });
 $("overclockSwitch").addEventListener("click", toggleOverclock);
-$("tierButton").addEventListener("click", () => { state.overclockTier = state.overclockTier % unlockedOcTiers() + 1; });
+$("tierButton").addEventListener("click", () => { state.overclockTier = state.overclockTier % unlockedOcTiers() + 1; save(); });
 $("cacheMeter").addEventListener("click", forceDump);
 $("tempMeter").addEventListener("click", () => {
   if (state.cooling < 3 || state.lockdown) return;
