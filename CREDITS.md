@@ -1,35 +1,14 @@
-# Asset credits
+# Asset Credits
 
-This project uses the following third-party visual assets:
+Overclocked! uses the following third-party artwork and interface assets. No AI-generated artwork is included.
 
-- `assets/vendor/electronics-full-airos.png`
-  - "32px Electronics" by Airos
-  - Source: https://opengameart.org/content/32px-electronics
-  - License: Creative Commons Attribution 3.0
+| Asset | Creator | License | Source |
+| --- | --- | --- | --- |
+| 32px Electronics | Airos | CC BY 3.0 | [OpenGameArt](https://opengameart.org/content/32px-electronics) |
+| Kenney Icon Font | Kenney.nl and SamBrishes | CC0 | [GitHub](https://github.com/nicodinh/kenney-icon-font) |
+| UI Pack: Sci-Fi | Kenney | CC0 | [OpenGameArt](https://opengameart.org/content/ui-pack-sci-fi) |
+| DEC VT100 terminal | Gorthmog, based on a photo by Jason Scott | CC BY-SA 4.0 | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:DEC_VT100_terminal_transparent.png) |
+| Tatung Einstein computer | Marcin Wichary, derivative by Ubcule | CC BY 2.0 | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Tatung-einstein-computer.png) |
+| Server racks | Racksserver | CC BY-SA 3.0 | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Racksserver.png) |
 
-- `assets/vendor/kenney-icon-css/` and `assets/vendor/fonts/`
-  - Kenney Icon Font by Kenney.nl and SamBrishes
-  - Source: https://github.com/nicodinh/kenney-icon-font
-  - License: Creative Commons Zero (CC0)
-
-- `assets/online/kenney-scifi/`
-  - "UI Pack: Sci-Fi" by Kenney
-  - Source: https://opengameart.org/content/ui-pack-sci-fi
-  - License: Creative Commons Zero (CC0)
-
-- `assets/online/wikimedia/dec-vt100.png`
-  - DEC VT100 terminal transparent by Gorthmog, based on a photo by Jason Scott
-  - Source: https://commons.wikimedia.org/wiki/File:DEC_VT100_terminal_transparent.png
-  - License: Creative Commons Attribution-ShareAlike 4.0
-
-- `assets/online/wikimedia/tatung-einstein.png`
-  - Tatung Einstein computer by Marcin Wichary, derivative by Ubcule
-  - Source: https://commons.wikimedia.org/wiki/File:Tatung-einstein-computer.png
-  - License: Creative Commons Attribution 2.0
-
-- `assets/online/wikimedia/server-racks.png`
-  - Server racks by Racksserver
-  - Source: https://commons.wikimedia.org/wiki/File:Racksserver.png
-  - License: Creative Commons Attribution-ShareAlike 3.0
-
-No AI-generated artwork is used in the project.
+The custom layout, effects, game logic, and README banner are original project work.
