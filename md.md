@@ -369,7 +369,9 @@ While the game is active, automatic income also fills a storage meter. When the 
 
 - The stored Bytes are automatically sold.
 - A multiplied payout is awarded.
-- The storage meter resets and starts filling again.
+- The storage meter subtracts the completed batch and starts filling the next batch.
+- If enough income arrives for several batches at once, all completed batches are sold together.
+- Sale notifications use a short cooldown so extremely fast production does not flood the screen with repeated messages.
 
 The player can click the Bonus Sale meter early. An early sale pays 80% of the normal multiplied value.
 
@@ -382,7 +384,7 @@ The player can click the Bonus Sale meter early. An early sale pays 80% of the n
 | 128GB NVMe | 25,000,000 Bytes | 1,000,000 Bytes | 3.5× |
 | Distributed Array | 350,000,000 Bytes | 10,000,000 Bytes | 4× |
 
-The Bonus Sale controls remain hidden until the player purchases storage.
+The Bonus Sale controls remain hidden until the player purchases storage. Before storage is purchased, its value label clearly says **Buy storage first**.
 
 ---
 
@@ -443,6 +445,7 @@ During lockdown:
 - The machine cannot restart Overclocking.
 - A red full-screen warning appears.
 - A recovery timer estimates the remaining cooldown.
+- The estimate is based on the machine's actual passive cooling speed and is labelled as an approximate time to cool.
 - The system unlocks only after temperature reaches zero.
 
 ### Power Upgrades
@@ -629,10 +632,13 @@ Prestiging preserves:
 - Lifetime statistics.
 - Previously discovered synergy records.
 - Existing Ghost Bytes.
+- Half of the run's extra System Update production bonus.
 
 The player earns Ghost Bytes using a formula based on all-time Bytes.
 
 Every Ghost Byte permanently increases all automatic income by 2%.
+
+System Update bonuses partially survive a restart. Half of the bonus above the normal 1× production rate carries into the next run, rewarding event participation without allowing one run's temporary optimization to dominate every future run.
 
 Before the restart occurs, a confirmation message clearly shows:
 
@@ -691,42 +697,27 @@ Every program has three descriptions based on ownership:
 
 Living descriptions appear in the Store and beneath owned programs, making quantity increases feel like changes to the world rather than only larger numbers.
 
-### CSS Pixel Machine Graphics
+### Licensed Machine Progression
 
-The central machine graphics were rebuilt as original CSS pixel art rather than relying on generic generated images.
+The central machine uses large licensed hardware photography rather than generated images or a crowded collage of small sprites.
 
-#### Dusty Thinkpad
+#### Early Operation
 
-- Wide laptop silhouette.
-- Thick, worn-looking screen border.
-- Recessed terminal display.
-- Blinking green cursor.
-- Physical keyboard base with individual key shapes.
+- A large transparent DEC VT100 terminal is the first click target.
+- Its beige casing and visible keyboard make the starting machine immediately recognizable.
+- The photographic asset remains isolated against the game environment so it reads clearly at a glance.
 
-#### Modded Desktop
+#### Growing Operation
 
-- Separate monitor and tower.
-- Visible rotating case fans.
-- Drive bays.
-- Blinking activity LED.
-- Terminal monitor with blue-green glow.
-
-#### Watercooled Rig
-
-- Wider performance chassis.
-- Animated coolant tubes.
-- Moving cyan liquid effect.
-- Animated RGB strip.
-- Brighter monitor and hardware frame.
+- The focal hardware changes to a Tatung Einstein home computer.
+- The larger integrated system visually communicates that the operation has moved beyond the original terminal.
+- Mid-game stages retain this machine while lighting, stage labels, and surrounding systems communicate further growth.
 
 #### Server Infrastructure
 
-- Personal computer is replaced by a server rack.
-- Five independent rack rows.
-- Asynchronous status LEDs.
-- Animated data-throughput lines.
-- Central embedded `SYS_` terminal display.
-- Later stages increase the rack’s lighting and network glow.
+- Late stages replace the personal computer with a bank of full-height server racks.
+- The racks are presented as one large click target rather than several small decorative pieces.
+- Stage names and infrastructure multipliers continue escalating toward distributed, orbital, and quantum-scale operation.
 
 ### Machine State Graphics
 
@@ -759,11 +750,11 @@ The design deliberately avoids generic AI-style gradients, oversized rounded car
 
 The entire interface is built around recognizable game assets rather than text-only dashboard rows.
 
-- The licensed Airos electronics sprite sheet appears as active network nodes, background hardware texture, empty-state artwork, event artwork, and infrastructure decoration.
+- The licensed Airos electronics sprite sheet is used for the favicon and retained as a credited project asset.
 - Kenney icons anchor navigation, statistics, controls, category tabs, upgrade buttons, programs, and Store purchases.
 - Running programs and Store purchases use large framed asset wells so each item reads like a game object.
-- The machine is surrounded by additional electronics nodes that appear and strengthen as the infrastructure stage advances.
-- The Quick Upgrades shelf is a visible illustrated decision strip rather than a hidden text shortcut.
+- The focal machine changes from a DEC VT100 terminal to a Tatung Einstein computer and finally to server racks as the operation advances.
+- The Quick Upgrades shelf appears only when a relevant upgrade is available.
 - Controls for Surge, Overclocking, temperature, and Bonus Sales each have their own hardware-style icon rail.
 - Icons always remain paired with plain-language labels where the action could otherwise be unclear.
 
@@ -827,6 +818,7 @@ The middle is intentionally spacious. Owned programs accumulate upward from the 
 The right column contains:
 
 - Available spending Bytes.
+- A conditional Quick Upgrades shelf.
 - Buy quantity controls.
 - Progressive category tabs.
 - Scrollable store items.
@@ -886,11 +878,18 @@ Lifetime statistics remain after Prestige.
 
 ## Saving And Offline Earnings
 
-The game automatically saves locally every 30 seconds and when the browser tab closes.
+The game automatically saves locally every 30 seconds, when the browser tab is hidden, and when the browser tab closes.
+
+Local saves use a versioned format with an integrity check. Before a new autosave replaces the current save, the game keeps the previous known-good save as a recovery copy. If the main save becomes unreadable, the game automatically attempts to recover from that copy and clearly tells the player what happened.
+
+The Options panel shows the last save time and the previous autosave time. Players can save immediately, restore the previous autosave, export a portable backup string, import a backup, or erase both local copies. Imports are checked before they replace progress, and the current save is retained as a recovery copy during import or restore.
+
+If the same save changes in another browser tab, the game warns the player so they can reload instead of unknowingly overwriting newer progress. Storage errors, including disabled or full browser storage, produce a visible warning.
 
 The Options panel provides:
 
 - Manual Save.
+- Restore Previous Autosave.
 - Export Save.
 - Import Save.
 - Erase Save Data.
@@ -904,6 +903,7 @@ When the player returns:
 
 - The game calculates up to eight hours of missed automatic production.
 - Offline income pays at 50% of the normal automatic rate.
+- Offline production includes program output, network upgrades, the current infrastructure-stage multiplier, System Update bonuses, and permanent Ghost Byte bonuses.
 - A notification explains the time away, Bytes earned, and applied rate.
 - Offline time does not fill the active Bonus Sale meter.
 
@@ -933,7 +933,7 @@ No AI-generated artwork is used. The central machine progression uses large, lic
 
 ### Original Project Graphics
 
-The evolving central machine, particles, terminal screens, fans, coolant tubes, RGB strip, server rack, scanlines, Overclock glow, and Danger Zone effects are built specifically for the project using HTML and CSS shapes and animations.
+The game-specific environment, particles, scanlines, click feedback, Overclock glow, Danger Zone effects, layout, and interaction states are built specifically for the project using HTML and CSS.
 
 ### Online Hardware Artwork
 
@@ -986,7 +986,9 @@ The current game has been substantially expanded and redesigned.
 - Added persistent lifetime statistics.
 - Added manual fan pulses.
 - Added permanent Ghost Byte income bonuses.
+- Corrected offline earnings to include infrastructure-stage and Ghost Byte multipliers.
 - Added improved Prestige confirmation.
+- Made Prestige preserve half of the extra System Update production bonus.
 - Added save export and import.
 - Added automatic migration for older saves.
 - Changed automatic saving to every 30 seconds.
@@ -1006,7 +1008,7 @@ The current game has been substantially expanded and redesigned.
 - Simplified the interface around the core click, buy, and grow loop.
 - Removed duplicate information from the main view.
 - Hid secondary statistics and the activity log.
-- Hid the redundant quick-upgrade shelf.
+- Made the Quick Upgrades shelf appear only when it has a relevant purchase to show.
 - Added a live Next recommendation.
 - Added missing-Byte and estimated-wait calculations.
 - Added progressive store category unlocks.
@@ -1019,8 +1021,10 @@ The current game has been substantially expanded and redesigned.
 - Simplified navigation labels.
 - Improved mobile layouts.
 - Added clear empty states and beginner instructions.
+- Made Running Programs refresh immediately after a purchase and recover from stale render state.
+- Standardized the storage and Overclock unlock labels.
+- Added a dependable base layout for the terminal ticker.
 - Rebuilt the full interface around large program assets, icon-led controls, and hardware-style visual frames.
-- Added sprite-based network nodes around the central machine that react to infrastructure progression.
 - Added illustrated navigation, statistics, Store tabs, event panels, and modal surfaces.
 - Restored Quick Upgrades as a compact visual purchase shelf.
 - Reworked the desktop layout into three natural game spaces with thick physical separators.
@@ -1031,22 +1035,25 @@ The current game has been substantially expanded and redesigned.
 
 ### Graphics Work Completed
 
-- Replaced the single recolored machine presentation with evolving CSS pixel hardware.
-- Created the Dusty Thinkpad form.
-- Created the Modded Desktop form.
-- Created the Watercooled Rig form.
-- Created the Server Rack form.
-- Added rotating fans.
-- Added blinking terminal cursors and hardware LEDs.
-- Added animated coolant.
-- Added animated RGB hardware lighting.
-- Added independent server data bars.
+- Replaced small hardware sprite collages with large licensed computer photographs.
+- Added distinct early, middle, and late machine presentations.
 - Added drifting terminal particles.
 - Added CRT scanlines.
 - Added Overclock heat shimmer and green lighting.
 - Added red Danger Zone particles and border pulses.
 - Added colored event windows.
+- Added licensed Kenney sci-fi panel and meter artwork.
 - Redesigned the complete interface around a restrained cyber-terminal visual system.
+
+### Reliability And Consistency Work Completed
+
+- Made Store item previews calculate without temporarily changing the selected Store tab.
+- Aligned Combo decay timing with the click-streak continuation threshold.
+- Strengthened manual Bonus Sale checks when no storage tier exists.
+- Made automatic Bonus Sales process multiple completed batches together.
+- Added a cooldown to automatic Bonus Sale notifications.
+- Corrected the thermal-lockdown timer label and cooling estimate.
+- Ensured Quick Upgrades are not permanently hidden by older responsive styling.
 
 ---
 

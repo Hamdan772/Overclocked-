@@ -97,6 +97,11 @@ const STAGE_LINES = [
   "Physical location no longer applies. Bytes remain measurable.",
 ];
 
+const SAVE_KEY = "overclocked-save";
+const BACKUP_KEY = "overclocked-save-backup";
+const SAVE_VERSION = 2;
+let pendingLoadNotice = "";
+
 const freshState = () => ({
   bytes: 0, allTime: 0, runTime: 0, clicks: 0, rep: 0, ghostBytes: 0, prestiges: 0,
   software: Array(SOFTWARE.length).fill(0), network: 0, storage: 0, power: 0, cooling: 0, os: Array(7).fill(false), abilities: Array(ABILITIES.length).fill(false),
@@ -106,7 +111,7 @@ const freshState = () => ({
   reducedMotion: false, sound: false, buyAmount: 1, combo: 0, surgeEnds: 0, lastClickTime: 0,
   packetVisible: false, packetRarity: "common", packetEnds: 0, nextPacket: Date.now() + 120000, guideDismissed: false, lastSave: Date.now(),
   lifetimeClicks: 0, programsPurchased: 0, packetsCollected: 0, eventsResolved: 0, eventsIgnored: 0,
-  criticalClicks: 0, longestStreak: 0, totalPlayTime: 0, synergiesDiscovered: [], systemUpdates: 0,
+  criticalClicks: 0, longestStreak: 0, totalPlayTime: 0, synergiesDiscovered: [], systemUpdates: 0, lastCacheSaleToast: 0,
 });
 let state = load();
 let lastTick = performance.now();
@@ -116,6 +121,7 @@ let shelfSignature = "";
 let unlockSignature = "";
 let lastRenderedStage = stageIndex();
 let lastProgramUnlockCount = PROGRAM_UNLOCKS.filter(cost => state.allTime >= cost).length;
+let mobileView = "machine";
 
 const $ = id => document.getElementById(id);
 const fmt = n => {
@@ -137,22 +143,82 @@ function programFlavor(index, owned) {
   return PROGRAM_FLAVOR[index][owned >= 50 ? 2 : owned >= 10 ? 1 : 0];
 }
 
+function saveChecksum(text) {
+  let hash = 2166136261;
+  for (let i = 0; i < text.length; i++) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(16);
+}
+function saveEnvelope(payload) {
+  const savedAt = Date.now();
+  return { version: SAVE_VERSION, savedAt, checksum: saveChecksum(JSON.stringify(payload)), payload };
+}
+function readSave(raw) {
+  if (!raw) return null;
+  const parsed = JSON.parse(raw);
+  if (parsed?.payload && parsed?.version) {
+    if (parsed.checksum !== saveChecksum(JSON.stringify(parsed.payload))) throw new Error("Save checksum mismatch");
+    return parsed.payload;
+  }
+  return parsed;
+}
+function normalizeSave(data) {
+  const loaded = { ...freshState(), ...data, event: null, overclock: false, packetVisible: false };
+  loaded.software = [...(data.software || []), ...Array(SOFTWARE.length).fill(0)].slice(0, SOFTWARE.length);
+  loaded.os = [...(data.os || []), ...Array(OS.length).fill(false)].slice(0, OS.length);
+  loaded.abilities = [...(data.abilities || []), ...Array(ABILITIES.length).fill(false)].slice(0, ABILITIES.length);
+  loaded.nextEvent = Math.max(loaded.nextEvent || 0, Date.now() + 60000);
+  loaded.nextPacket = Math.max(loaded.nextPacket || 0, Date.now() + 60000);
+  return loaded;
+}
 function load() {
   try {
-    const data = JSON.parse(localStorage.getItem("overclocked-save"));
-    if (!data) return freshState();
-    const loaded = { ...freshState(), ...data, event: null, overclock: false, packetVisible: false };
-    loaded.software = [...(data.software || []), ...Array(SOFTWARE.length).fill(0)].slice(0, SOFTWARE.length);
-    loaded.os = [...(data.os || []), ...Array(OS.length).fill(false)].slice(0, OS.length);
-    loaded.abilities = [...(data.abilities || []), ...Array(ABILITIES.length).fill(false)].slice(0, ABILITIES.length);
-    loaded.nextEvent = Math.max(loaded.nextEvent || 0, Date.now() + 60000);
-    loaded.nextPacket = Math.max(loaded.nextPacket || 0, Date.now() + 60000);
-    return loaded;
-  } catch { return freshState(); }
+    const data = readSave(localStorage.getItem(SAVE_KEY));
+    if (data) return normalizeSave(data);
+  } catch {
+    try {
+      const backup = readSave(localStorage.getItem(BACKUP_KEY));
+      if (backup) {
+        pendingLoadNotice = "Primary save was unreadable. Previous autosave restored.";
+        return normalizeSave(backup);
+      }
+    } catch { /* Start clean if both local copies are unreadable. */ }
+    pendingLoadNotice = "Local save could not be read. A fresh run was started.";
+  }
+  return freshState();
 }
-function save() {
-  state.lastSave = Date.now();
-  localStorage.setItem("overclocked-save", JSON.stringify(state));
+function save(showError = false) {
+  try {
+    state.lastSave = Date.now();
+    const current = localStorage.getItem(SAVE_KEY);
+    if (current) {
+      try {
+        readSave(current);
+        localStorage.setItem(BACKUP_KEY, current);
+      } catch { /* Preserve the last known-good backup. */ }
+    }
+    localStorage.setItem(SAVE_KEY, JSON.stringify(saveEnvelope(state)));
+    return true;
+  } catch {
+    if (showError && $("toastStack")) toast("Save failed. Browser storage may be full or disabled.");
+    return false;
+  }
+}
+function encodeBackup(value) {
+  const bytes = new TextEncoder().encode(JSON.stringify(value));
+  let binary = "";
+  bytes.forEach(byte => { binary += String.fromCharCode(byte); });
+  return btoa(binary);
+}
+function decodeBackup(text) {
+  const binary = atob(text.trim());
+  const bytes = Uint8Array.from(binary, char => char.charCodeAt(0));
+  return JSON.parse(new TextDecoder().decode(bytes));
+}
+function saveTime(value) {
+  return value ? new Date(value).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "Not saved yet";
 }
 function log(message, hot = false) {
   const line = document.createElement("p");
@@ -271,8 +337,7 @@ function buy(tab, index) {
   }
   renderShopNeeded = true; save();
 }
-function shopItems() {
-  const tab = state.activeTab;
+function shopItems(tab = state.activeTab) {
   const programIcons = ["ki-computer", "ki-robot", "ki-search", "ki-key", "ki-signal-high", "ki-lock", "ki-exclamation-triangle", "ki-device", "ki-network", "ki-coin", "ki-cloud", "ki-users-alt"];
   if (tab === "software") {
     const nextLocked = PROGRAM_UNLOCKS.findIndex(cost => state.allTime < cost);
@@ -310,9 +375,10 @@ function renderShop() {
   $("shopList").innerHTML = shopItems().map((item, i) => {
     const shortfall = Math.max(0, item.cost - state.bytes);
     const wait = totalBps() > 0 ? Math.ceil(shortfall / totalBps()) : null;
-    return `<button class="shop-item ${item.ok && canBuy(item.cost) ? "affordable" : ""}" data-buy="${item.index ?? i}" ${!item.ok || !canBuy(item.cost) ? "disabled" : ""}>
+    return `<button class="shop-item ${item.locked ? "locked" : ""} ${item.ok && canBuy(item.cost) ? "affordable" : ""}" data-buy="${item.index ?? i}" ${!item.ok || !canBuy(item.cost) ? "disabled" : ""}>
     <span class="item-icon ki ${item.icon}"></span><span class="item-copy"><strong>${item.name}</strong><small>${item.desc}</small></span>
-    <span class="item-price">${fmt(item.cost)} Bytes<small class="${item.locked ? "need-more" : canBuy(item.cost) ? "can-buy" : "need-more"}">${item.locked ? "LOCKED" : item.owned !== "" ? `You own ${item.owned}` : canBuy(item.cost) ? "Can buy now" : `Need ${fmt(shortfall)} more${wait ? ` · ${wait}s` : ""}`}</small></span></button>`;
+    <span class="item-price">${fmt(item.cost)} Bytes<small class="${item.locked ? "need-more" : canBuy(item.cost) ? "can-buy" : "need-more"}">${item.locked ? "LOCKED" : item.owned !== "" ? `You own ${item.owned}` : canBuy(item.cost) ? "Can buy now" : `Need ${fmt(shortfall)} more${wait ? ` · ${wait}s` : ""}`}</small></span>
+    ${item.locked ? `<span class="locked-stamp"><i class="ki ki-lock"></i> LOCKED</span>` : ""}</button>`;
   }).join("");
   renderShopNeeded = false;
 }
@@ -327,13 +393,10 @@ function renderUpgradeShelf() {
   if (signature === shelfSignature) return;
   shelfSignature = signature;
   $("upgradeShelf").innerHTML = upgrades.map(item => `<button class="upgrade-button ki ${item.icon} ${canBuy(item.cost) ? "affordable" : ""}" data-shelf-tab="${item.tab}" data-shelf-index="${item.index}" title="${item.name}: ${fmt(item.cost)} Bytes"><b>${item.name}</b><small>${fmt(item.cost)} Bytes</small></button>`).join("");
+  $("upgradeArea").classList.toggle("hidden-upgrades", upgrades.length === 0);
 }
 function shopItemsFor(tab) {
-  const previous = state.activeTab;
-  state.activeTab = tab;
-  const items = shopItems();
-  state.activeTab = previous;
-  return items;
+  return shopItems(tab);
 }
 function renderOwned() {
   const signature = `${state.software.join(",")}|${activeSynergies().map(s => s.name).join(",")}`;
@@ -405,7 +468,6 @@ function renderGuide() {
   $("repStat").classList.toggle("hidden-stat", state.rep === 0);
   $("ghostStat").classList.toggle("hidden-stat", state.ghostBytes === 0 && state.prestiges === 0);
   $("milestoneStat").classList.toggle("hidden-stat", totalMilestones() === 0);
-  $("upgradeArea").classList.add("hidden-upgrades");
   document.querySelector(".shop-toolbar").classList.toggle("hidden-toolbar", state.software.reduce((a, b) => a + b, 0) < 5);
 }
 function tickerMessages() {
@@ -455,7 +517,8 @@ function collectPacket() {
 }
 function grantOfflineEarnings() {
   const elapsed = Math.min(8 * 3600, Math.max(0, (Date.now() - state.lastSave) / 1000));
-  const reward = baseBps() * netMult() * state.sessionBpsBonus * elapsed * .5;
+  const ghostBonus = 1 + state.ghostBytes * .02;
+  const reward = baseBps() * netMult() * stageMult() * state.sessionBpsBonus * ghostBonus * elapsed * .5;
   const duration = elapsed >= 3600 ? `${(elapsed / 3600).toFixed(1)} hours` : `${Math.floor(elapsed / 60)} minutes`;
   if (elapsed > 60 && reward >= 1) { addBytes(reward); toast(`While away for ${duration}: +${fmt(reward)} Bytes at 50% rate`); log(`OFFLINE INCOME: ${fmt(reward)} BYTES`); }
 }
@@ -475,8 +538,9 @@ function triggerLockdown() {
   toast("THERMAL LOCKDOWN"); log("CRITICAL THERMAL LOCKDOWN", true); checkAchievements();
 }
 function forceDump() {
-  if (!state.storage || !state.cache) return;
-  const s = tier(STORAGE, state.storage); const reward = state.cache * s[3] * .8;
+  const s = tier(STORAGE, state.storage);
+  if (!s || state.cache <= 0) return;
+  const reward = state.cache * s[3] * .8;
   addBytes(reward); state.cache = 0; toast(`Manual batch: +${fmt(reward)} B`);
 }
 function checkAchievements() {
@@ -538,11 +602,18 @@ function openAchievements() {
   showModal();
 }
 function openSettings() {
+  let recoveryTime = "";
+  try {
+    const recovery = JSON.parse(localStorage.getItem(BACKUP_KEY));
+    recoveryTime = recovery?.savedAt ? saveTime(recovery.savedAt) : "";
+  } catch { /* An unreadable recovery copy is treated as unavailable. */ }
   $("modalTitle").textContent = "Options";
   $("modalBody").innerHTML = `<h3>Display</h3><div class="modal-row"><span>Reduced motion</span><button class="modal-action" id="motionSetting">${state.reducedMotion ? "ON" : "OFF"}</button></div>
-  <div class="modal-row"><span>Save immediately</span><button class="modal-action" id="manualSave">SAVE</button></div>
+  <h3>Local save</h3><p>Your progress stays in this browser. A previous known-good autosave is kept for recovery.</p>
+  <div class="modal-row"><span>Last saved<br><small>${saveTime(state.lastSave)}</small></span><button class="modal-action" id="manualSave">SAVE NOW</button></div>
+  <div class="modal-row"><span>Previous autosave<br><small>${recoveryTime || "No recovery save yet"}</small></span>${recoveryTime ? `<button class="modal-action" id="restoreBackup">RESTORE</button>` : `<span>UNAVAILABLE</span>`}</div>
   <div class="modal-row"><span>Export or import a backup</span><span><button class="modal-action" id="exportSave">EXPORT</button> <button class="modal-action" id="importSave">IMPORT</button></span></div>
-  <div class="modal-row"><span>Erase local save data</span><button class="modal-action" id="eraseSave">ERASE</button></div>
+  <div class="modal-row"><span>Erase all local save data</span><button class="modal-action" id="eraseSave">ERASE</button></div>
   <h3>Progress</h3><p>Drive wipes: ${state.prestiges}<br>Achievements: ${state.achievements.length}/${ACHIEVEMENTS.length}<br>Current computer: ${STAGES[stageIndex()][0]}</p>`;
   showModal();
 }
@@ -555,22 +626,46 @@ function openHelp() {
   showModal();
 }
 function showModal() { if (!$("modal").open) $("modal").showModal(); }
+function setMobileView(view) {
+  mobileView = view;
+  document.body.dataset.mobileView = view;
+  document.querySelectorAll("[data-mobile-view]").forEach(button => {
+    const active = button.dataset.mobileView === view;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-current", active ? "page" : "false");
+  });
+  if (matchMedia("(max-width: 700px)").matches) window.scrollTo({ top: 0, behavior: state.reducedMotion ? "auto" : "smooth" });
+}
 function prestige() {
   const earned = Math.floor(Math.sqrt(state.allTime / 1e6));
   if (state.allTime < 1e9 || !confirm(`Restart this run for ${earned} Ghost Bytes? Current Bytes, programs, and upgrades will reset. Achievements, reputation, and lifetime statistics stay.`)) return;
+  const carriedSessionBonus = 1 + (state.sessionBpsBonus - 1) * .5;
   const carry = { ghostBytes: state.ghostBytes + earned, rep: state.rep, prestiges: state.prestiges + 1, achievements: [...state.achievements],
     lifetimeClicks: state.lifetimeClicks, programsPurchased: state.programsPurchased, packetsCollected: state.packetsCollected,
     eventsResolved: state.eventsResolved, eventsIgnored: state.eventsIgnored, criticalClicks: state.criticalClicks,
-    longestStreak: state.longestStreak, totalPlayTime: state.totalPlayTime, synergiesDiscovered: [...state.synergiesDiscovered] };
+    longestStreak: state.longestStreak, totalPlayTime: state.totalPlayTime, synergiesDiscovered: [...state.synergiesDiscovered],
+    sessionBpsBonus: carriedSessionBonus };
   state = { ...freshState(), ...carry }; toast(`Drive wiped // +${earned} GBY`); renderShopNeeded = true; save();
 }
 function tick(now) {
   const dt = Math.min(.25, (now - lastTick) / 1000); lastTick = now; state.runTime += dt; state.totalPlayTime += dt;
   let bps = totalBps(); addBytes(bps * dt);
-  if (state.abilities[1] && Date.now() - state.lastClickTime > 900) state.combo = Math.max(0, state.combo - dt * 8);
+  if (state.abilities[1] && Date.now() - state.lastClickTime >= 850) state.combo = Math.max(0, state.combo - dt * 8);
   if (state.storage) {
-    const s = tier(STORAGE, state.storage); state.cache += bps * dt;
-    if (state.cache >= s[2]) { const reward = s[2] * s[3]; state.cache -= s[2]; addBytes(reward); toast(`BATCH SALE // +${fmt(reward)} B`); }
+    const s = tier(STORAGE, state.storage);
+    if (s) {
+      state.cache += bps * dt;
+      const batches = Math.floor(state.cache / s[2]);
+      if (batches > 0) {
+        const reward = batches * s[2] * s[3];
+        state.cache -= batches * s[2];
+        addBytes(reward);
+        if (Date.now() - state.lastCacheSaleToast >= 2000) {
+          toast(`BATCH SALE${batches > 1 ? ` ×${batches}` : ""} // +${fmt(reward)} B`);
+          state.lastCacheSaleToast = Date.now();
+        }
+      }
+    }
   }
   const cool = coolingStats();
   if (state.overclock) {
@@ -613,13 +708,14 @@ function render() {
   $("tempValue").textContent = `${(21 + state.temp * .79).toFixed(1)}°C`; $("tempFill").style.width = `${state.temp}%`;
   $("tempFill").style.background = state.temp >= 75 ? "var(--red)" : state.temp >= 50 ? "var(--yellow)" : "var(--green)";
   $("tempStatus").textContent = state.lockdown ? "Cooling down" : state.temp >= 75 ? "Danger zone: income ×1.5" : state.overclock ? "Overclock is running" : "Cool and steady";
-  $("cacheValue").textContent = storage ? `${fmt(state.cache)} / ${fmt(storage[2])} B` : "NO STORAGE";
+  $("cacheValue").textContent = storage ? `${fmt(state.cache)} / ${fmt(storage[2])} B` : "Buy storage first";
   $("cacheFill").style.width = storage ? `${Math.min(100, state.cache / storage[2] * 100)}%` : "0";
   $("overclockSwitch").className = `switch ${!state.overclockUnlocked ? "locked" : ""} ${state.overclock ? "on" : ""}`;
-  $("overclockSwitch").setAttribute("aria-pressed", state.overclock); $("switchLabel").textContent = !state.overclockUnlocked ? "Locked at 50K Bytes" : state.lockdown ? "Cooling down" : state.overclock ? "Running hot" : "Ready";
+  $("overclockSwitch").setAttribute("aria-pressed", state.overclock); $("switchLabel").textContent = !state.overclockUnlocked ? "Unlocks at 50,000 Bytes" : state.lockdown ? "Cooling down" : state.overclock ? "Running hot" : "Ready";
   $("tierButton").disabled = !state.overclockUnlocked; $("tierButton").textContent = `${["Boost","Turbo","Redline","Critical"][state.overclockTier-1]} ×${[2,3,5,8][state.overclockTier-1]}`;
   $("prestigeButton").classList.toggle("hidden", state.allTime < 1e9); $("lockdown").classList.toggle("hidden", !state.lockdown);
-  $("lockdownTimer").textContent = `${Math.ceil(state.temp / (4 * coolingStats().decay))} SEC TO NOMINAL`;
+  const passiveCoolingPerSecond = 4 * coolingStats().decay;
+  $("lockdownTimer").textContent = `~${Math.ceil(state.temp / passiveCoolingPerSecond)} SEC TO COOL`;
   const surgeRemaining = Math.max(0, Math.ceil((state.surgeEnds - Date.now()) / 1000));
   $("comboValue").textContent = surgeRemaining ? `SURGE ${surgeRemaining}s` : `×${comboMult().toFixed(2)}`;
   $("comboStatus").textContent = surgeRemaining ? "All click and automatic income is doubled" : "Keep clicking to charge a 20 second ×2 Surge";
@@ -655,6 +751,7 @@ $("goalButton").addEventListener("click", () => {
   const tab = $("goalButton").dataset.goalTab;
   if (tab === "overclock") return toggleOverclock();
   state.activeTab = tab; renderShopNeeded = true; render();
+  setMobileView("store");
 });
 document.addEventListener("keydown", e => {
   if (e.code === "Space" && !["BUTTON","INPUT","TEXTAREA"].includes(document.activeElement.tagName)) { e.preventDefault(); clickLaptop(); }
@@ -683,22 +780,61 @@ $("tempMeter").addEventListener("click", () => {
 $("eventStack").addEventListener("click", e => { if (e.target.id === "eventAction") eventAction(); if (e.target.id === "eventDismiss") resolveEvent(false); });
 $("achievementsButton").addEventListener("click", openAchievements); $("settingsButton").addEventListener("click", openSettings);
 $("prestigeButton").addEventListener("click", prestige); $("modalClose").addEventListener("click", () => $("modal").close());
+document.querySelector(".mobile-nav").addEventListener("click", e => {
+  const button = e.target.closest("[data-mobile-view]");
+  if (button) setMobileView(button.dataset.mobileView);
+});
 $("modalBody").addEventListener("click", e => {
   if (e.target.id === "motionSetting") { state.reducedMotion = !state.reducedMotion; openSettings(); }
-  if (e.target.id === "manualSave") { save(); toast("Game saved"); }
+  if (e.target.id === "manualSave") {
+    if (save(true)) { toast("Game saved"); openSettings(); }
+  }
+  if (e.target.id === "restoreBackup" && confirm("Restore the previous autosave? Your current save will be kept as the new recovery copy.")) {
+    try {
+      const recoveryRaw = localStorage.getItem(BACKUP_KEY);
+      const recovery = readSave(recoveryRaw);
+      if (!recovery) throw new Error("No recovery save");
+      const current = localStorage.getItem(SAVE_KEY);
+      if (current) {
+        try { readSave(current); localStorage.setItem(BACKUP_KEY, current); }
+        catch { /* Keep the known-good recovery copy. */ }
+      }
+      localStorage.setItem(SAVE_KEY, JSON.stringify(saveEnvelope(recovery)));
+      location.reload();
+    } catch { toast("The recovery save could not be restored"); }
+  }
   if (e.target.id === "exportSave") {
     $("modalTitle").textContent = "Export save";
-    $("modalBody").innerHTML = `<p>Store this backup text somewhere safe.</p><textarea class="save-text" readonly>${btoa(JSON.stringify(state))}</textarea>`;
+    $("modalBody").innerHTML = `<p>Store this backup text somewhere safe. It includes a version and integrity check.</p><textarea class="save-text" readonly>${encodeBackup(saveEnvelope(state))}</textarea>`;
   }
   if (e.target.id === "importSave") {
     const backup = prompt("Paste your Overclocked backup string:");
     if (!backup) return;
-    try { localStorage.setItem("overclocked-save", JSON.stringify(JSON.parse(atob(backup.trim())))); location.reload(); }
+    try {
+      const decoded = decodeBackup(backup);
+      const imported = readSave(JSON.stringify(decoded));
+      if (!imported || typeof imported !== "object") throw new Error("Invalid save");
+      const current = localStorage.getItem(SAVE_KEY);
+      if (current) {
+        try { readSave(current); localStorage.setItem(BACKUP_KEY, current); }
+        catch { /* Keep the known-good recovery copy. */ }
+      }
+      localStorage.setItem(SAVE_KEY, JSON.stringify(saveEnvelope(imported)));
+      location.reload();
+    }
     catch { toast("That backup could not be read"); }
   }
-  if (e.target.id === "eraseSave" && confirm("Erase all Overclocked save data?")) { localStorage.removeItem("overclocked-save"); location.reload(); }
+  if (e.target.id === "eraseSave" && confirm("Erase the current save and its recovery copy?")) {
+    localStorage.removeItem(SAVE_KEY); localStorage.removeItem(BACKUP_KEY); location.reload();
+  }
 });
 setInterval(updateTicker, 20000);
 setInterval(save, 30000); window.addEventListener("beforeunload", save);
+document.addEventListener("visibilitychange", () => { if (document.hidden) save(); });
+window.addEventListener("storage", e => {
+  if (e.key === SAVE_KEY && e.newValue) toast("Save changed in another tab. Reload to use it.");
+});
+document.body.dataset.mobileView = mobileView;
 log("BOOT SEQUENCE COMPLETE"); log("PAYLOAD ENGINE READY");
+if (pendingLoadNotice) { log(pendingLoadNotice, true); toast(pendingLoadNotice); }
 grantOfflineEarnings(); renderShop(); updateTicker(); requestAnimationFrame(tick);

@@ -26,7 +26,7 @@
     <main class="game-shell">
       <section class="click-column">
         <div class="currency-board">
-          <span><i class="ki ki-coin"></i> Bytes</span>
+          <span><i class="ki ki-coin"></i> // Machine hub</span>
           <output id="bytes">0</output>
           <strong id="rateLine">0 Bytes per second</strong>
         </div>
@@ -100,7 +100,7 @@
       </section>
 
       <section class="network-column">
-        <header class="section-header"><span><i class="ki ki-network"></i> Running programs</span><small id="clicks">0 clicks</small></header>
+        <header class="section-header"><span><i class="ki ki-network"></i> // Infrastructure</span><small id="clicks">0 clicks</small></header>
         <section class="quick-stats">
           <div><i class="ki ki-forward"></i><span>Per second</span><strong id="bps">0 B/S</strong></div>
           <div><i class="ki ki-mouse-left-button"></i><span>Per click</span><strong id="bpc">1 B</strong></div>
@@ -125,7 +125,7 @@
       </section>
 
       <aside class="shop-panel">
-        <header class="section-header"><span><i class="ki ki-shopping-cart"></i> Store</span><strong id="shopFunds">0 B</strong></header>
+        <header class="section-header"><span><i class="ki ki-shopping-cart"></i> // Store shelf</span><strong id="shopFunds">0 B</strong></header>
         <section class="upgrade-area hidden-upgrades" id="upgradeArea">
           <div class="shop-subhead"><span><i class="ki ki-star"></i> Quick upgrades</span><small>buy instantly</small></div>
           <div class="upgrade-shelf" id="upgradeShelf"></div>
@@ -141,6 +141,12 @@
         <div class="shop-list" id="shopList"></div>
       </aside>
     </main>
+
+    <nav class="mobile-nav" aria-label="Game sections">
+      <button class="active" data-mobile-view="machine"><span class="ki ki-computer"></span><b>Machine</b></button>
+      <button data-mobile-view="programs"><span class="ki ki-network"></span><b>Programs</b></button>
+      <button data-mobile-view="store"><span class="ki ki-shopping-cart"></span><b>Store</b></button>
+    </nav>
 
     <div class="event-stack" id="eventStack"></div>
     <div class="toast-stack" id="toastStack"></div>
