@@ -3,116 +3,149 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#242424" />
-    <meta name="description" content="Overclock an old computer, run dubious scripts, and make an unreasonable number of Bytes." />
+    <meta name="theme-color" content="#15191d" />
+    <meta name="description" content="Overclock an old computer, run dubious programs, and make an unreasonable number of Bytes." />
     <title>Overclocked!</title>
-    <link rel="icon" href="/assets/old-tv-denislav-Di5cc9D-.png" />
-    <script type="module" crossorigin src="/assets/index-BIyAyB25.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-CIfh2toQ.css">
+    <link rel="icon" href="/assets/electronics-full-airos-CWirSgpp.png" />
+    <script type="module" crossorigin src="/assets/index-BRZFVaoy.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-HrAPfl3A.css">
   </head>
   <body>
     <header class="topbar">
-      <div class="brand">
-        <span><strong>Overclocked!</strong><small>idle computer game</small></span>
-      </div>
+      <div class="brand"><span class="ki ki-computer"></span><strong>OVERCLOCKED!</strong><small>idle computer game</small></div>
+      <div class="news"><output id="newsText">Local computer makes one Byte. Experts remain calm.</output></div>
       <nav class="top-actions">
-        <span id="clock">00:00:00</span>
-        <button id="achievementsButton">Achievements</button>
-        <button class="hidden" id="prestigeButton">Wipe drive</button>
-        <button id="settingsButton">Settings</button>
+        <button id="helpButton"><span class="ki ki-question-circle"></span><b>Help</b></button>
+        <button id="achievementsButton"><span class="ki ki-podium"></span><b>Stats</b></button>
+        <button class="hidden" id="prestigeButton"><span class="ki ki-reload"></span><b>Restart</b></button>
+        <button id="settingsButton"><span class="ki ki-cog"></span><b>Options</b></button>
       </nav>
     </header>
+    <div class="terminal-ticker"><output id="tickerText">[SYSTEM] Waiting for the first process.</output></div>
 
     <main class="game-shell">
-      <aside class="collection-panel">
-        <header class="wood-header">
-          <span>Your network</span>
-          <small id="runTime">UPTIME 00:00</small>
-        </header>
-        <section class="quick-stats">
-          <div><span>Per second</span><strong id="bps">0 B/S</strong></div>
-          <div><span>Per click</span><strong id="bpc">1 B</strong></div>
-          <div><span>All time</span><strong id="allTime">0 B</strong></div>
-          <div><span>Reputation</span><strong id="rep">0 / 1000</strong></div>
-          <div><span>Ghost Bytes</span><strong id="ghostBytes">0 GBY</strong></div>
-        </section>
-        <section class="owned-section">
-          <div class="section-title"><span>Running programs</span><small id="clicks">0 clicks</small></div>
-          <div class="owned-grid" id="ownedGrid"></div>
-          <div class="empty-owned" id="emptyOwned">
-            <strong>Nothing running yet</strong>
-            <span>Click the computer, then buy a Shell Script.</span>
-          </div>
-        </section>
-        <section class="log-section">
-          <div class="section-title"><span>Recent activity</span></div>
-          <div id="systemLog" class="system-log" aria-live="polite"></div>
-        </section>
-      </aside>
-
-      <section class="play-area">
+      <section class="click-column">
         <div class="currency-board">
-          <span>Bytes in wallet</span>
+          <span><i class="ki ki-coin"></i> Bytes</span>
           <output id="bytes">0</output>
-          <strong id="rateLine">0 B per second</strong>
+          <strong id="rateLine">0 Bytes per second</strong>
         </div>
-        <div class="stage-ribbon" id="stageLabel">Dusty Thinkpad</div>
+        <div class="stage-ribbon"><span><i class="ki ki-computer"></i><b id="stageLabel">Dusty Thinkpad</b></span><small id="runTime">UPTIME 00:00</small></div>
+        <button class="goal-bar" id="goalButton">
+          <span class="goal-icon ki ki-next"></span><strong id="goalName">Buy a Shell Script</strong><small id="goalProgress">Earn 10 more Bytes</small>
+          <i><b id="goalFill"></b></i>
+        </button>
+        <section class="starter-guide" id="guidePanel">
+          <header><strong><span class="ki ki-flag"></span> Getting started</strong><button id="guideClose"><span class="ki ki-times"></span> Hide</button></header>
+          <ol>
+            <li id="guideClick">Click the machine to earn 10 Bytes.</li>
+            <li id="guideBuy">Buy a Shell Script in the Store.</li>
+            <li id="guideIdle">Programs earn Bytes automatically.</li>
+          </ol>
+        </section>
 
         <div class="machine-zone" id="machineZone">
-          <button class="laptop stage-1" id="laptop" aria-label="Click computer to generate Bytes">
-            <img src="/assets/old-tv-denislav-Di5cc9D-.png" alt="Pixel art CRT television by Denislav" draggable="false" />
-            <span class="click-hint" id="screenPrompt">CLICK</span>
-            <span class="click-output" id="screenBpc">+1 Byte</span>
+          <div class="particle-field" aria-hidden="true">
+            <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+          </div>
+          <button class="laptop stage-1" id="laptop" aria-label="Click laptop to generate Bytes">
+            <span class="online-machine" aria-hidden="true">
+              <img class="machine-photo machine-photo-early" src="/assets/dec-vt100-Dzqg9B8A.png" alt="" />
+              <img class="machine-photo machine-photo-mid" src="/assets/tatung-einstein-6RJ03n4R.png" alt="" />
+              <img class="machine-photo machine-photo-late" src="/assets/server-racks-cjKjNgTY.png" alt="" />
+            </span>
+            <span class="machine-art" aria-hidden="true">
+              <span class="pixel-laptop">
+                <span class="pixel-screen"><i></i><b>_</b></span>
+                <span class="pixel-base"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+              </span>
+              <span class="pixel-desktop">
+                <span class="tower"><i class="fan fan-a">+</i><i class="fan fan-b">+</i><i class="drive"></i><i class="led"></i><i class="coolant coolant-a"></i><i class="coolant coolant-b"></i><i class="rgb"></i></span>
+                <span class="monitor"><i></i><b>_</b></span>
+              </span>
+              <span class="pixel-rack">
+                <i><b></b><b></b><em></em></i><i><b></b><b></b><em></em></i><i><b></b><b></b><em></em></i><i><b></b><b></b><em></em></i><i><b></b><b></b><em></em></i>
+                <strong>SYS<span>_</span></strong>
+              </span>
+            </span>
+            <span class="machine-readout"><b id="screenPrompt">CLICK MACHINE</b><small id="screenBpc">+1 Byte</small></span>
           </button>
+          <button class="packet-drop hidden" id="packetDrop" aria-label="Collect data packet"><span class="ki ki-coin"></span><b>CLICK FOR FREE BYTES</b></button>
           <div id="clickBursts" aria-hidden="true"></div>
         </div>
 
-        <div class="controls-dock">
-          <section class="overclock-card">
-            <div>
-              <span class="control-name">Overclock</span>
-              <strong id="switchLabel">Locked at 50K Bytes</strong>
-            </div>
+        <section class="control-panel">
+          <div class="combo-row advanced-control locked-control" id="comboPanel">
+            <div><b><span class="ki ki-star"></span> Surge</b><output id="comboValue">×1.0</output></div>
+            <div class="meter"><span id="comboFill"></span></div>
+            <small id="comboStatus">Keep clicking to charge a 20 second ×2 Surge</small>
+          </div>
+          <div class="overclock-row advanced-control" id="overclockPanel">
             <button id="overclockSwitch" class="switch locked" aria-pressed="false">
               <span class="switch-track"><span class="switch-handle"></span></span>
+              <span><b><i class="ki ki-off"></i> Overclock</b><small id="switchLabel">Unlocks at 50,000 Bytes</small></span>
             </button>
             <button id="tierButton" class="tier-button" disabled>Boost ×2</button>
-          </section>
-          <section class="meter-card">
-            <div class="meter-head"><span>Temperature</span><output id="tempValue">21.0°C</output></div>
+          </div>
+          <div class="meter-row advanced-control" id="temperaturePanel">
+            <div><b><span class="ki ki-adjust"></span> Temperature</b><output id="tempValue">21.0°C</output></div>
             <div class="meter temp-meter" id="tempMeter"><span id="tempFill"></span><i></i></div>
             <small id="tempStatus">Cool and steady</small>
-          </section>
-          <section class="meter-card cache-card">
-            <div class="meter-head"><span>Batch cache</span><output id="cacheValue">No storage</output></div>
+          </div>
+          <div class="meter-row cache-row advanced-control" id="cachePanel">
+            <div><b><span class="ki ki-save"></span> Bonus sale</b><output id="cacheValue">Buy storage first</output></div>
             <button class="meter" id="cacheMeter"><span id="cacheFill"></span></button>
-            <small>Click to sell early at 80%</small>
-          </section>
+          </div>
+        </section>
+      </section>
+
+      <section class="network-column">
+        <header class="section-header"><span><i class="ki ki-network"></i> Running programs</span><small id="clicks">0 clicks</small></header>
+        <section class="quick-stats">
+          <div><i class="ki ki-forward"></i><span>Per second</span><strong id="bps">0 B/S</strong></div>
+          <div><i class="ki ki-mouse-left-button"></i><span>Per click</span><strong id="bpc">1 B</strong></div>
+          <div class="secondary-stat"><i class="ki ki-coin"></i><span>All time</span><strong id="allTime">0 B</strong></div>
+          <div class="secondary-stat" id="repStat"><i class="ki ki-badge"></i><span>Event reputation</span><strong id="rep">0 / 1000</strong></div>
+          <div class="secondary-stat" id="ghostStat"><i class="ki ki-reload"></i><span>Prestige currency</span><strong id="ghostBytes">0</strong></div>
+          <div class="secondary-stat" id="milestoneStat"><i class="ki ki-star"></i><span>Program bonuses</span><strong id="milestones">0</strong></div>
+        </section>
+        <div class="building-rows" id="ownedGrid"></div>
+        <section class="synergy-panel hidden" id="synergyPanel">
+          <header>Active synergies</header>
+          <div id="synergyList"></div>
+        </section>
+        <div class="empty-owned" id="emptyOwned">
+          <strong>No programs running.</strong>
+          <span>Click the laptop 10 times, then buy a Shell Script.</span>
         </div>
+        <section class="log-section hidden-detail">
+          <header>Activity</header>
+          <div id="systemLog" class="system-log" aria-live="polite"></div>
+        </section>
       </section>
 
       <aside class="shop-panel">
-        <header class="wood-header">
-          <span>Store</span>
-          <strong id="shopFunds">0 B</strong>
-        </header>
+        <header class="section-header"><span><i class="ki ki-shopping-cart"></i> Store</span><strong id="shopFunds">0 B</strong></header>
+        <section class="upgrade-area hidden-upgrades" id="upgradeArea">
+          <div class="shop-subhead"><span><i class="ki ki-star"></i> Quick upgrades</span><small>buy instantly</small></div>
+          <div class="upgrade-shelf" id="upgradeShelf"></div>
+        </section>
+        <div class="shop-toolbar">
+          <span><i class="ki ki-shopping-case"></i> Buy quantity</span>
+          <button data-buy-amount="1" class="active">1</button>
+          <button data-buy-amount="10">10</button>
+          <button data-buy-amount="100">100</button>
+          <button data-buy-amount="max">Max</button>
+        </div>
         <nav class="shop-tabs" id="shopTabs"></nav>
-        <div class="shop-help">Bright items are affordable. Buy programs to earn Bytes automatically.</div>
         <div class="shop-list" id="shopList"></div>
       </aside>
     </main>
 
     <div class="event-stack" id="eventStack"></div>
     <div class="toast-stack" id="toastStack"></div>
-
-    <dialog id="modal">
-      <div class="modal-head"><span id="modalTitle">Panel</span><button id="modalClose">Close</button></div>
-      <div id="modalBody" class="modal-body"></div>
-    </dialog>
-
-    <div id="lockdown" class="lockdown hidden">
-      <div><strong>Too hot!</strong><span>The computer is cooling down.</span><output id="lockdownTimer">--</output></div>
-    </div>
-
+    <div class="stage-transition hidden" id="stageTransition"><div><small>&gt; STAGE TRANSITION INITIATED</small><strong id="stageTransitionName">MODDED DESKTOP</strong><p id="stageTransitionText">Migrating processes...</p></div></div>
+    <dialog id="modal"><div class="modal-head"><span id="modalTitle">Panel</span><button id="modalClose">Close</button></div><div id="modalBody" class="modal-body"></div></dialog>
+    <div id="lockdown" class="lockdown hidden"><div><strong>THERMAL LOCKDOWN</strong><span>The laptop is cooling down.</span><output id="lockdownTimer">--</output></div></div>
   </body>
 </html>
